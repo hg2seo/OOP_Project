@@ -139,7 +139,35 @@ public class GUIBasedJavaIDE extends JFrame {
   // 파일 저장 버튼의 이벤트 처리 리스너
   private class SaveListener implements ActionListener {
     public void actionPerformed(ActionEvent event) {
+// 파일 저장 이름 가져오기
+      String saveFileName = fileSaveField.getText().trim(); // 저장할 파일 이름 가져오기 (공백 제거)
 
+      // 저장할 파일 이름이 제공되지 않은 경우, 현재 열려 있는 파일에 덮어쓰기
+      if (saveFileName.isEmpty()) {
+        if (fName == null) { // 현재 열려 있는 파일이 없으면 에러 메시지 출력
+          resultWindow.setText("Error: No file to overwrite. Please provide a file name.");
+          return;
+        }
+        saveFileName = fName; // 저장할 파일 이름을 현재 열려 있는 파일 이름으로 설정
+      }
+
+      // 저장할 파일 생성
+      File file = new File("javafile/" + saveFileName);
+
+      try {
+        // 파일에 내용을 저장하기 위한 출력 버퍼 생성
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+        writer.write(editingWindow.getText()); // Editing Window의 텍스트를 파일에 저장
+        writer.flush(); // 버퍼 비우기
+        writer.close(); // 버퍼 닫기
+
+        // 성공 메시지 출력 및 필드 초기화
+        resultWindow.setText("File saved successfully: " + saveFileName);
+        fileSaveField.setText(""); // 파일 저장 필드 초기화
+        setTitle("\"" + saveFileName + "\" - My Java IDE GUI"); // 타이틀 업데이트
+      } catch (IOException e) {
+        resultWindow.setText("Error: Failed to save the file!");
+      }
     }
   }
 
