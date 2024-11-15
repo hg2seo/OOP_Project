@@ -16,8 +16,8 @@ public class GUIBasedJavaIDE extends JFrame {
     setTitle("My Java IDE GUI");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setSize(800, 720);
-    Container c = getContentPane();
-    c.setLayout(new BorderLayout());
+    Container container = getContentPane();
+    container.setLayout(new BorderLayout());
 
     // 그리드백 레이아웃을 탑재한 컨텐트펜 생성
     JPanel contentPane = new JPanel(new GridBagLayout());
@@ -107,7 +107,7 @@ public class GUIBasedJavaIDE extends JFrame {
     contentPane.add(resultScrollPane, contentGBC);
 
     // 프레임에 컨텐트펜 탑재
-    c.add(contentPane, BorderLayout.CENTER);
+    container.add(contentPane, BorderLayout.CENTER);
     setVisible(true);
   }
 
@@ -253,7 +253,7 @@ public class GUIBasedJavaIDE extends JFrame {
           resultWindow.append("\n\n-------------------------------------------------------------------\n\n"
                   + "saved error file successfully... - " + fName + ".error");
           errorContent = null;
-        } catch (IOException e) {
+        } catch (IOException error) {
           resultWindow.setText("Error: Failed to save error file!");
         }
       }
@@ -262,7 +262,7 @@ public class GUIBasedJavaIDE extends JFrame {
 
   // 삭제 버튼의 이벤트 처리 리스너
   private class DeleteListener implements ActionListener {
-    public void actionPerformed(ActionEvent e) {
+    public void actionPerformed(ActionEvent event) {
       // 파일 불러오기 여부 검사
       if (fName == null)
         resultWindow.setText("Error: No java file to delete selected!");
@@ -295,7 +295,7 @@ public class GUIBasedJavaIDE extends JFrame {
 
   // 클리어 버튼의 이벤트 처리 리스너
   private class ClearListener implements ActionListener {
-    public void actionPerformed(ActionEvent e) {
+    public void actionPerformed(ActionEvent event) {
       // 필드, 윈도우, 파일 이름, 에러 내용 전부 초기화, 프로그램 타이틀 변경
       fileOpenField.setText("");
       fileSaveField.setText("");
