@@ -3,114 +3,100 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 
+import static java.awt.Color.BLUE;
+import static java.awt.Color.ORANGE;
+
 public class GUIBasedJavaIDE extends JFrame {
-  private final JTextField fileOpenField;
-  private final JTextField fileSaveField;
-  private final JTextArea editingWindow;
+  private JTabbedPane editingWindow;
   private final JTextArea resultWindow;
-  private String fName = null;
-  private StringBuilder errorContent = null;
 
   public GUIBasedJavaIDE() {
     // GUI 기본 설정
     setTitle("My Java IDE GUI");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setSize(800, 720);
-    Container container = getContentPane();
-    container.setLayout(new BorderLayout());
-
-    // 그리드백 레이아웃을 탑재한 컨텐트펜 생성
-    JPanel contentPane = new JPanel(new GridBagLayout());
-    contentPane.setBorder(BorderFactory.createEmptyBorder(0, 120, 0, 120));
-    // 그리드백 레이아웃 내 컴포넌트 배치 설정을 관리하는 객체 생성, 여백 설정
-    GridBagConstraints contentGBC = new GridBagConstraints();
-    contentGBC.insets = new Insets(5, 5, 5, 5);
-
-    // 파일 불러오기를 위한 텍스트필드의 위치 및 너비 설정
-    fileOpenField = new JTextField(40);
-    contentGBC.gridx = 0;
-    contentGBC.gridy = 0;
-    contentGBC.gridwidth = 5;
-    contentGBC.weightx = 1;
-    contentGBC.fill = GridBagConstraints.HORIZONTAL;
-    contentPane.add(fileOpenField, contentGBC);
-
-    // 불러오기 버튼의 위치 및 너비, 이벤트 처리 리스너 설정
-    JButton openBtn = new JButton("Open");
-    openBtn.addActionListener(new OpenListener());
-    contentGBC.gridx = 5;
-    contentGBC.gridwidth = 1;
-    contentGBC.weightx = 0;
-    contentGBC.fill = GridBagConstraints.NONE;
-    contentPane.add(openBtn, contentGBC);
-
-    // 파일 저장하기를 위한 텍스트필드의 위치 및 너비 설정
-    fileSaveField = new JTextField(40);
-    contentGBC.gridx = 0;
-    contentGBC.gridy = 1;
-    contentGBC.gridwidth = 5;
-    contentGBC.weightx = 1;
-    contentGBC.fill = GridBagConstraints.HORIZONTAL;
-    contentPane.add(fileSaveField, contentGBC);
-
-    // 저장하기 버튼의 위치 및 너비, 이벤트 처리 리스너 설정
-    JButton saveBtn = new JButton("Save");
-    saveBtn.addActionListener(new SaveListener());
-    contentGBC.gridx = 5;
-    contentGBC.gridwidth = 1;
-    contentGBC.weightx = 0;
-    contentGBC.fill = GridBagConstraints.NONE;
-    contentPane.add(saveBtn, contentGBC);
-
-    // 코드 편집을 위한 Editing window 텍스트 에리어의 스크롤, 위치, 너비, 높이비율, 공간 채우기 설정
-    editingWindow = new JTextArea();
-    JScrollPane editingScrollPane = new JScrollPane(editingWindow);
-    contentGBC.gridx = 0;
-    contentGBC.gridy = 3;
-    contentGBC.gridwidth = 6;
-    contentGBC.weighty = 8;
-    contentGBC.fill = GridBagConstraints.BOTH;
-    contentPane.add(editingScrollPane, contentGBC);
-
-    // 4개 버튼 배치를 위한 패널 생성
-    JPanel buttonPanel = new JPanel(new GridLayout(1, 4, 5, 5));
-
-    // 컴파일 버튼, 에러 파일 저장 버튼, 자바 파일 삭제 버튼, 클리어 버튼 생성 및 이벤트 처리 리스너 설정
-    JButton compileBtn = new JButton("Compile");
-    compileBtn.addActionListener(new CompileListener());
-    JButton saveErrorsBtn = new JButton("Save Errors");
-    saveErrorsBtn.addActionListener(new SaveErrorsListener());
-    JButton deleteBtn = new JButton("Delete");
-    deleteBtn.addActionListener(new DeleteListener());
-    JButton clearBtn = new JButton("Clear");
-    clearBtn.addActionListener(new ClearListener());
-
-    // 버튼 패널에 버튼 탑재
-    buttonPanel.add(compileBtn);
-    buttonPanel.add(saveErrorsBtn);
-    buttonPanel.add(deleteBtn);
-    buttonPanel.add(clearBtn);
-
-    // 패널의 위치 및 높이비율, 공간 채우기 설정
-    contentGBC.gridy = 4;
-    contentGBC.weighty = 1;
-    contentGBC.fill = GridBagConstraints.HORIZONTAL;
-    contentPane.add(buttonPanel, contentGBC);
-
-    // 동작 수행 결과를 나태니기 위한 Result window 텍스트 에리어의 편집 가능 여부, 스크롤, 위치, 높이비율, 공간 채우기 설정
+    createMenu(); // 메뉴 생성, 프레임 삽입
+    setSize(815, 765);
+    Container c = getContentPane();
+    c.setLayout(null); // 레이아웃 매니저 비활성화
+    // JTabbedPane 생성(EditingWindow)
+    editingWindow = new JTabbedPane();
+    editingWindow.setBounds(0, 0, 800, 500);
+    c.add(editingWindow);
+    // Result Window 생성 후 배치
     resultWindow = new JTextArea();
     resultWindow.setEditable(false);
     JScrollPane resultScrollPane = new JScrollPane(resultWindow);
-    contentGBC.gridy = 5;
-    contentGBC.weighty = 5;
-    contentGBC.fill = GridBagConstraints.BOTH;
-    contentPane.add(resultScrollPane, contentGBC);
-
-    // 프레임에 컨텐트펜 탑재
-    container.add(contentPane, BorderLayout.CENTER);
+    resultScrollPane.setBounds(0,505, 800, 200); // 위치, 크기 설정
+    resultScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS); // 수평 스크롤바 항상 표시
+    resultScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS); // 수직 스크롤바 항상 표시
+    c.add(resultScrollPane);
     setVisible(true);
   }
+  // 메뉴 생성 메서드
+  private void createMenu() {
+    // 메뉴바
+    JMenuBar menuBar = new JMenuBar();
+    menuBar.setBackground(ORANGE);
+    // File 메뉴
+    JMenu fileMenu = new JMenu("File");
+    JMenuItem fileItem1 = new JMenuItem("Open");
+    fileItem1.addActionListener(e -> openFile()); // openFile() 메소드 연결
+    JMenuItem fileItem2 = new JMenuItem("Close");
+    JMenuItem fileItem3 = new JMenuItem("Save");
+    JMenuItem fileItem4 = new JMenuItem("Save As");
+    JMenuItem fileItem5 = new JMenuItem("Quit");
+    fileItem1.setBackground(new Color(30,144,255));
+    fileItem2.setBackground(new Color(30,144,255));
+    fileItem3.setBackground(new Color(30,144,255));
+    fileItem4.setBackground(new Color(30,144,255));
+    fileItem5.setBackground(new Color(30,144,255));
+    fileMenu.add(fileItem1);
+    fileMenu.add(fileItem2);
+    fileMenu.add(fileItem3);
+    fileMenu.add(fileItem4);
+    fileMenu.add(fileItem5);
+    fileMenu.setBackground(BLUE);
+    // Run 메뉴
+    JMenu runMenu = new JMenu("Run");
+    JMenuItem runItem = new JMenuItem("Compile");
+    runItem.setBackground(new Color(30,144,255));
+    runMenu.add(runItem);
+    menuBar.add(fileMenu);
+    menuBar.add(runMenu);
 
+    setJMenuBar(menuBar);
+  }
+  // 파일 열기 메서드
+  private void openFile() {
+    JFileChooser fileChooser = new JFileChooser();
+    fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Java Files", "java"));
+    int result = fileChooser.showOpenDialog(this);
+
+    if (result == JFileChooser.APPROVE_OPTION) {
+      File file = fileChooser.getSelectedFile();
+      try {
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        StringBuilder content = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+          content.append(line).append("\n");
+        }
+        reader.close();
+
+        // 새로운 탭에 파일 추가
+        JTextArea newTabTextArea = new JTextArea(content.toString());
+        JScrollPane newScrollPane = new JScrollPane(newTabTextArea);
+        editingWindow.addTab(file.getName(), newScrollPane);
+        editingWindow.setSelectedComponent(newScrollPane); // 새로 열린 파일로 포커스 이동
+
+      } catch (IOException ex) {
+        JOptionPane.showMessageDialog(this, "Error reading file: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+      }
+    }
+  }
+// 기존에 활용했던 리스너
+/*
   // 파일 불러오기 버튼의 이벤트 처리 리스너
   private class OpenListener implements ActionListener {
     public void actionPerformed(ActionEvent event) {
@@ -306,7 +292,7 @@ public class GUIBasedJavaIDE extends JFrame {
       setTitle("My Java IDE GUI");
     }
   }
-
+*/
   public static void main(String[] args) {
     new GUIBasedJavaIDE();
   }
