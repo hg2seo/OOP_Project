@@ -7,7 +7,7 @@ import static java.awt.Color.BLUE;
 import static java.awt.Color.ORANGE;
 
 public class GUIBasedJavaIDE extends JFrame {
-  private JTabbedPane editingWindow;
+  private final JTabbedPane editingWindow;
   private final JTextArea resultWindow;
 
   public GUIBasedJavaIDE() {
@@ -18,10 +18,12 @@ public class GUIBasedJavaIDE extends JFrame {
     setSize(815, 765);
     Container c = getContentPane();
     c.setLayout(null); // 레이아웃 매니저 비활성화
+
     // JTabbedPane 생성(EditingWindow)
     editingWindow = new JTabbedPane();
     editingWindow.setBounds(0, 0, 800, 500);
     c.add(editingWindow);
+
     // Result Window 생성 후 배치
     resultWindow = new JTextArea();
     resultWindow.setEditable(false);
@@ -32,40 +34,54 @@ public class GUIBasedJavaIDE extends JFrame {
     c.add(resultScrollPane);
     setVisible(true);
   }
+
   // 메뉴 생성 메서드
   private void createMenu() {
     // 메뉴바
     JMenuBar menuBar = new JMenuBar();
     menuBar.setBackground(ORANGE);
+
     // File 메뉴
     JMenu fileMenu = new JMenu("File");
-    JMenuItem fileItem1 = new JMenuItem("Open");
-    fileItem1.addActionListener(e -> openFile()); // openFile() 메소드 연결
-    JMenuItem fileItem2 = new JMenuItem("Close");
-    JMenuItem fileItem3 = new JMenuItem("Save");
-    JMenuItem fileItem4 = new JMenuItem("Save As");
-    JMenuItem fileItem5 = new JMenuItem("Quit");
-    fileItem1.setBackground(new Color(30,144,255));
-    fileItem2.setBackground(new Color(30,144,255));
-    fileItem3.setBackground(new Color(30,144,255));
-    fileItem4.setBackground(new Color(30,144,255));
-    fileItem5.setBackground(new Color(30,144,255));
-    fileMenu.add(fileItem1);
-    fileMenu.add(fileItem2);
-    fileMenu.add(fileItem3);
-    fileMenu.add(fileItem4);
-    fileMenu.add(fileItem5);
+    String[] fileMenuItems = {"Open", "Close", "Save", "Save As", "Quit"};
+    ActionListener[] fileMenuActions = { e -> openFile(), new CloseListener(), new SaveListener(), new SaveAsListener(), new QuitListener() };
+    for (int i=0; i<fileMenuItems.length; i++) {
+      JMenuItem menuItem = new JMenuItem(fileMenuItems[i]);
+      menuItem.setBackground(new Color(30, 144, 255));
+      menuItem.addActionListener(fileMenuActions[i]);
+      fileMenu.add(menuItem);
+    }
     fileMenu.setBackground(BLUE);
+
     // Run 메뉴
     JMenu runMenu = new JMenu("Run");
     JMenuItem runItem = new JMenuItem("Compile");
     runItem.setBackground(new Color(30,144,255));
     runMenu.add(runItem);
+
     menuBar.add(fileMenu);
     menuBar.add(runMenu);
 
     setJMenuBar(menuBar);
   }
+
+  // 원활한 저장 작업을 위해 탭별로 파일 경로를 저장하는 커스텀 스크롤팬
+  private static class EditorScrollPane extends JScrollPane {
+    private String tabPath; // 해당 탭이 불러온 파일의 경로
+    private final JTextArea innerTextArea; // 해당 탭의 TextArea
+
+    private EditorScrollPane(JTextArea textArea, String filePath) {
+      super(textArea);
+      this.tabPath = filePath;
+      innerTextArea = textArea;
+    }
+
+    // 반환 함수
+    public String getTabPath() { return tabPath; }
+    public JTextArea getTextArea() { return innerTextArea; }
+    public void saveNewTabPath(String tabPath) { this.tabPath = tabPath; }
+  }
+
   // 파일 열기 메서드
   private void openFile() {
     JFileChooser fileChooser = new JFileChooser();
@@ -85,7 +101,7 @@ public class GUIBasedJavaIDE extends JFrame {
 
         // 새로운 탭에 파일 추가
         JTextArea newTabTextArea = new JTextArea(content.toString());
-        JScrollPane newScrollPane = new JScrollPane(newTabTextArea);
+        EditorScrollPane newScrollPane = new EditorScrollPane(newTabTextArea, file.getPath());
         editingWindow.addTab(file.getName(), newScrollPane);
         editingWindow.setSelectedComponent(newScrollPane); // 새로 열린 파일로 포커스 이동
 
@@ -95,95 +111,8 @@ public class GUIBasedJavaIDE extends JFrame {
       }
     }
   }
-// 기존에 활용했던 리스너
-/*
-  // 파일 불러오기 버튼의 이벤트 처리 리스너
-  private class OpenListener implements ActionListener {
-    public void actionPerformed(ActionEvent event) {
-      // 파일 이름 읽어오기
-      String openName = fileOpenField.getText();
-      File file = new File("javafile/" + openName);
-      // 파일 존재 여부 및 확장자 검사
-      if (file.exists() && openName.endsWith(".java")) {
-        try {
-          // 자바 파일을 읽어들일 입력 버퍼 생성
-          BufferedReader reader = new BufferedReader(new FileReader(file));
 
-          // 자바 파일 내용을 Editing Window 에 출력
-          String stream;
-          editingWindow.setText("");
-          while ((stream = reader.readLine()) != null) editingWindow.append(stream + "\n");
-
-          // 버퍼 닫기, 파일 입력 필드 초기화, 실행 결과 표시, 파일 이름 저장, 에러 내용 초기화, 프로그램 타이틀 변경
-          reader.close();
-          fileOpenField.setText("");
-          resultWindow.setText("Java file loaded successfully.");
-          fName = openName;
-          errorContent = null;
-          setTitle("\"" + openName + "\" - My Java IDE GUI");
-        } catch (IOException error) {
-          resultWindow.setText("Error: Failed to read the java file!");
-        }
-      }
-      else {
-        resultWindow.setText("Error: Invalid file!");
-      }
-    }
-  }
-
-  // 파일 저장 버튼의 이벤트 처리 리스너
-  private class SaveListener implements ActionListener {
-    public void actionPerformed(ActionEvent event) {
-      // 덮어쓰기 플래그
-      boolean overwrite = false;
-      // 파일 저장 이름 가져오기
-      String saveFileName = fileSaveField.getText().strip(); // 저장할 파일 이름 가져오기 (앞뒤 공백 제거)
-
-      // 저장할 파일 이름이 제공되지 않은 경우, 현재 열려 있는 파일에 덮어쓰기
-      if (saveFileName.isEmpty()) {
-        if (fName == null) { // 현재 열려 있는 파일이 없으면 에러 메시지 출력
-          resultWindow.setText("Error: No file to overwrite! Please open a file to overwrite or enter a filename.");
-          return;
-        }
-        saveFileName = fName; // 저장할 파일 이름을 현재 열려 있는 파일 이름으로 설정
-        overwrite = true; // 덮어쓰기 플래그 활성화
-      }
-      // 저장할 파일 이름이 제공되었으나 확장자가 .java 가 아니라면 에러 메시지 출력
-      else if (!saveFileName.endsWith(".java")) {
-        resultWindow.setText("Error: Invalid filename extension! Please enter a filename which ends with '.java'.");
-        return;
-      }
-
-      // 저장할 파일 생성
-      File file = new File("javafile/" + saveFileName);
-
-      // 새로운 파일을 생성하거나 현재 열려있는 파일의 변경 사항을 저장(덮어쓰기)하는 경우
-      if (!file.exists() || overwrite) {
-        try {
-          // 파일에 내용을 저장하기 위한 출력 버퍼 생성
-          BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-          writer.write(editingWindow.getText()); // Editing Window 의 텍스트를 파일에 저장
-          writer.flush(); // 버퍼 비우기
-          writer.close(); // 버퍼 닫기
-
-          // 성공 메시지 출력 및 필드 초기화
-          resultWindow.setText("File saved successfully: " + saveFileName);
-          fileSaveField.setText(""); // 파일 저장 필드 초기화
-          fName = saveFileName; // 열려있는 파일 교체
-          errorContent = null; // 에러 내용 초기화
-          setTitle("\"" + saveFileName + "\" - My Java IDE GUI"); // 타이틀 업데이트
-        } catch (IOException error) {
-          resultWindow.setText("Error: Failed to save the file! Check if filename contains invalid characters.");
-        }
-      }
-      // 동일한 이름의 파일이 이미 존재하는데 파일을 생성하려 경우 에러 메시지 출력
-      else
-        resultWindow.setText("Error: File already exists!\n" +
-                "    1) If you want to create a new file, please enter a not existing filename.\n" +
-                "    2) If you want to overwrite a file, please open the file first and empty name field before saving.");
-    }
-  }
-
+  /* 기존에 활용했던 리스너
   // 불러온 파일 컴파일 버튼의 이벤트 처리 리스너
   private class CompileListener implements ActionListener {
     public void actionPerformed(ActionEvent event) {
@@ -245,54 +174,125 @@ public class GUIBasedJavaIDE extends JFrame {
       }
     }
   }
+*/
 
-  // 삭제 버튼의 이벤트 처리 리스너
-  private class DeleteListener implements ActionListener {
-    public void actionPerformed(ActionEvent event) {
-      // 파일 불러오기 여부 검사
-      if (fName == null)
-        resultWindow.setText("Error: No java file to delete selected!");
-      else {
-        // editingWindow, resultWindow, errorContent 초기화
-        editingWindow.setText("");
-        resultWindow.setText("");
-        errorContent = null;
-        // javafile 폴더에서 이름으로 fileName 을 갖는 클래스 파일에 대한 객체를 생성
-        File classFile = new File("javafile/" + fName.replace(".java", ".class"));
-        // 클래스 파일 존재 시 삭제
-        if (classFile.exists()) {
-          classFile.delete();
-          resultWindow.append("Class file deleted.\n");
-        }
+  // 탭 닫기 메뉴 아이템의 리스너
+  private class CloseListener implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      // 열려있는 탭이 존재하지 않으면 오류 메시지 출력
+      if (editingWindow.getTabCount() == 0) {
+        JOptionPane.showMessageDialog(null, "Please open a file first.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+      }
 
-        // javafile 폴더에서 소스가 된 자바 파일에 대한 객체를 생성
-        File javaFile = new File("javafile/" + fName);
-        // 자바 파일 삭제
-        javaFile.delete();
-        resultWindow.append("Java file deleted.\n\n");
-
-        // 실행 결과 출력 및 프로그램 타이틀 변경, 파일 이름 초기화
-        resultWindow.append("Deletion completed.");
-        fName = null;
-        setTitle("My Java IDE GUI");
+      // 탭 닫을건지 재확인
+      int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to close this tab?", "Confirm", JOptionPane.YES_NO_OPTION);
+      if (result == JOptionPane.YES_OPTION) {
+        // 포커스를 갖고 있는 탭 닫기
+        int selectedIndex = editingWindow.getSelectedIndex();
+        editingWindow.removeTabAt(selectedIndex);
       }
     }
   }
 
-  // 클리어 버튼의 이벤트 처리 리스너
-  private class ClearListener implements ActionListener {
+  // 저장 메뉴 아이템의 리스너
+  private class SaveListener implements ActionListener {
     public void actionPerformed(ActionEvent event) {
-      // 필드, 윈도우, 파일 이름, 에러 내용 전부 초기화, 프로그램 타이틀 변경
-      fileOpenField.setText("");
-      fileSaveField.setText("");
-      editingWindow.setText("");
-      resultWindow.setText("");
-      fName = null;
-      errorContent = null;
-      setTitle("My Java IDE GUI");
+      // 열려있는 탭이 존재하지 않으면 오류 메시지 출력
+      if (editingWindow.getTabCount() == 0) {
+        JOptionPane.showMessageDialog(null, "Please open a file first.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+      }
+      // 저장할건지 재확인
+      int result = JOptionPane.showConfirmDialog(null, "Do you want to save the changes?", "Confirm", JOptionPane.YES_NO_OPTION);
+      if (result == JOptionPane.YES_OPTION) {
+        // 포커스를 가진 탭의 저장 경로와 편집 내용 가져오기
+        EditorScrollPane currentEditorScrollPane = (EditorScrollPane) editingWindow.getSelectedComponent();
+        JTextArea currentEditingWindow = currentEditorScrollPane.getTextArea();
+        File file = new File(currentEditorScrollPane.getTabPath());
+
+        try {
+          // 파일에 내용을 저장하기 위한 출력 버퍼 생성
+          BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+
+          writer.write(currentEditingWindow.getText()); // 포커스를 가진 Editing Window 의 텍스트를 파일에 저장
+          writer.flush(); // 버퍼 비우기
+          writer.close(); // 버퍼 닫기
+
+          // 성공 메시지 출력
+          JOptionPane.showMessageDialog(null, "File saved successfully", "Alert", JOptionPane.PLAIN_MESSAGE);
+        } catch (IOException e) {
+          JOptionPane.showMessageDialog(null, "Failed to save the file: " + e.getMessage(),
+                  "Error", JOptionPane.ERROR_MESSAGE);
+        }
+      }
     }
   }
-*/
+
+  // 다른 이름으로 저장 메뉴 아이템의 리스너
+  private class SaveAsListener implements ActionListener {
+    public void actionPerformed(ActionEvent event) {
+      // 열려있는 탭이 존재하지 않으면 오류 메시지 출력
+      if (editingWindow.getTabCount() == 0) {
+        JOptionPane.showMessageDialog(null, "Please open a file first.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+      }
+      // FileChooser 로 저장 경로와 이름 입력 받기
+      JFileChooser fileChooser = new JFileChooser();
+      fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Java File", "java"));
+      int saveResult = fileChooser.showSaveDialog(null);
+
+      if (saveResult == JFileChooser.APPROVE_OPTION) {
+        File file = fileChooser.getSelectedFile();
+
+        // 사용자에게 입력받은 이름이 .java 형태가 아니면 .java 확장자로 변환
+        if (!file.getName().endsWith(".java"))
+          file = new File(file.getAbsolutePath() + ".java");
+
+        // 이미 같은 이름의 파일이 경로에 존재하면 진짜로 덮어씌울건지 확인
+        if (file.exists()) {
+          int overwriteResult = JOptionPane.showConfirmDialog(null, "There is already a file with the same name in this location. Would you like to overwrite the file??", "Confirm", JOptionPane.YES_NO_OPTION);
+          if (overwriteResult != JOptionPane.YES_OPTION) {
+            return;
+          }
+        }
+
+        try {
+          // 포커스를 가진 탭의 편집 내용 가져오기
+          EditorScrollPane currentEditorScrollPane = (EditorScrollPane) editingWindow.getSelectedComponent();
+          JTextArea currentEditingWindow = currentEditorScrollPane.getTextArea();
+          BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+
+          writer.write(currentEditingWindow.getText()); // 포커스를 가진 Editing Window 의 텍스트를 파일에 저장
+          writer.flush(); // 버퍼 비우기
+          writer.close(); // 버퍼 닫기
+
+          // 입력받은 이름으로 탭의 이름 수정
+          int selectedIndex = editingWindow.getSelectedIndex();
+          editingWindow.setTitleAt(selectedIndex, file.getName());
+
+          // 스크롤팬이 저장하고 있는 경로 수정
+          currentEditorScrollPane.saveNewTabPath(file.getPath());
+          // 성공 메시지 출력
+          JOptionPane.showMessageDialog(null, "File saved successfully", "Alert", JOptionPane.PLAIN_MESSAGE);
+        } catch (IOException e) {
+          JOptionPane.showMessageDialog(null, "Failed to save the file: " + e.getMessage(),
+                  "Error", JOptionPane.ERROR_MESSAGE);
+        }
+      }
+    }
+  }
+
+  // 프로그램 종료 메뉴 아이템의 리스너
+  private class QuitListener implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      // 종료할건지 재확인
+      int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to quit this program?", "Confirm", JOptionPane.YES_NO_OPTION);
+      if (result == JOptionPane.YES_OPTION)
+        System.exit(0);
+    }
+  }
+
   public static void main(String[] args) {
     new GUIBasedJavaIDE();
   }
