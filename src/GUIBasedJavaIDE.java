@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.tools.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
@@ -18,10 +19,12 @@ public class GUIBasedJavaIDE extends JFrame {
     setSize(815, 765);
     Container c = getContentPane();
     c.setLayout(null); // 레이아웃 매니저 비활성화
+    addKeyListener(new MyKeyListener());
 
     // JTabbedPane 생성(EditingWindow)
     editingWindow = new JTabbedPane();
     editingWindow.setBounds(0, 0, 800, 500);
+    editingWindow.addKeyListener(new MyKeyListener());
     c.add(editingWindow);
 
     // Result Window 생성 후 배치
@@ -31,8 +34,13 @@ public class GUIBasedJavaIDE extends JFrame {
     resultScrollPane.setBounds(0,505, 800, 200); // 위치, 크기 설정
     resultScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS); // 수평 스크롤바 항상 표시
     resultScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS); // 수직 스크롤바 항상 표시
+    resultWindow.addKeyListener(new MyKeyListener());
     c.add(resultScrollPane);
+
     setVisible(true);
+
+    setFocusable(true);
+    requestFocus();
   }
 
   // 메뉴 생성 메서드
@@ -52,16 +60,17 @@ public class GUIBasedJavaIDE extends JFrame {
       fileMenu.add(menuItem);
     }
     fileMenu.setBackground(BLUE);
-
+    menuBar.add(fileMenu);
     // Run 메뉴
     JMenu runMenu = new JMenu("Run");
     JMenuItem runItem = new JMenuItem("Compile");
+    ActionListener runMenuAction = new CompileListener();
+    runItem.addActionListener(runMenuAction);
     runItem.setBackground(new Color(30,144,255));
     runMenu.add(runItem);
 
-    menuBar.add(fileMenu);
     menuBar.add(runMenu);
-
+    menuBar.add(runMenu);
     setJMenuBar(menuBar);
   }
 
@@ -84,7 +93,7 @@ public class GUIBasedJavaIDE extends JFrame {
 
   // 파일 열기 메서드
   private void openFile() {
-    JFileChooser fileChooser = new JFileChooser();
+    JFileChooser fileChooser = new JFileChooser(); // 파일 탐색기 인터페이스
     fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Java Files", "java"));
     int result = fileChooser.showOpenDialog(this);
 
@@ -112,17 +121,20 @@ public class GUIBasedJavaIDE extends JFrame {
     }
   }
 
-  /* 기존에 활용했던 리스너
   // 불러온 파일 컴파일 버튼의 이벤트 처리 리스너
   private class CompileListener implements ActionListener {
     public void actionPerformed(ActionEvent event) {
       // 파일 불러오기 여부 검사
-      if (fName == null)
-        resultWindow.setText("Error: No java file to compile selected!");
+      if ( editingWindow.getTabCount() == 0){
+        JOptionPane.showMessageDialog(null, "Please open a file first.", "Error", JOptionPane.ERROR_MESSAGE);return;}
       else {
+        EditorScrollPane currentEditorScrollPane = (EditorScrollPane) editingWindow.getSelectedComponent();
+        File file = new File(currentEditorScrollPane.getTabPath());
+
         try {
-          // 실행 경로와 파일명을 주고 javac(자바 컴파일러) 외부 명령어 실행을 통해 컴파일 수행
-          Process oProcess = new ProcessBuilder("javac", "javafile/" + fName).start();
+
+          // javac(자바 컴파일러) 외부 명령어 실행을 통해 컴파일 수행
+          Process oProcess = new ProcessBuilder("javac","-encoding","utf-8",file.getAbsolutePath()).start();
 
           // 컴파일 시 프로세스의 표준 오류 출력을 받아들일 입력 버퍼 생성
           BufferedReader stdError = new BufferedReader(new InputStreamReader(oProcess.getErrorStream()));
@@ -130,17 +142,15 @@ public class GUIBasedJavaIDE extends JFrame {
           // 오류 플래그와 오류의 내용을 저장할 공간 생성 및 오류 출력, 저장 수행
           boolean hasError = false;
           String stream;
-          errorContent = new StringBuilder();
           resultWindow.setText("");
           while ((stream = stdError.readLine()) != null) {
             hasError = true; // 오류가 발생했으므로 플래그를 true 로 전환
-            errorContent.append(stream).append("\n"); // 내용 한줄씩 저장
             resultWindow.append(stream + "\n"); // 한줄씩 출력
           }
 
           // 컴파일 정상 완료 시 출력
           if (!hasError)
-            resultWindow.setText("Compiled successfully: " + fName.replace(".java", ".class"));
+            resultWindow.setText("Compiled successfully: " + file.getName().replace(".java", ".class"));
 
           // 버퍼 닫기
           stdError.close();
@@ -151,30 +161,7 @@ public class GUIBasedJavaIDE extends JFrame {
     }
   }
 
-  private class SaveErrorsListener implements ActionListener {
-    public void actionPerformed(ActionEvent event) {
-      // 저장할 오류 내용의 존재 여부 확인
-      if (errorContent == null || errorContent.length() == 0)
-        resultWindow.setText("Error: No error file to save exists!");
-      else {
-        try {
-          // 오류 파일을 log 폴더에 생성하고 저장할 출력 버퍼 생성
-          BufferedWriter writer = new BufferedWriter(new FileWriter("log/" + fName.concat(".error")));
-          // errorContent 객체에 저장된 오류 내용을 String 으로 변환하여 저장
-          writer.write(errorContent.toString());
-          // 입력 버퍼 비우고 닫기, 실행 결과 출력 및 errorContent 초기화
-          writer.flush();
-          writer.close();
-          resultWindow.append("\n\n-------------------------------------------------------------------\n\n"
-                  + "saved error file successfully... - " + fName + ".error");
-          errorContent = null;
-        } catch (IOException error) {
-          resultWindow.setText("Error: Failed to save error file!");
-        }
-      }
-    }
-  }
-*/
+
 
   // 탭 닫기 메뉴 아이템의 리스너
   private class CloseListener implements ActionListener {
@@ -290,6 +277,19 @@ public class GUIBasedJavaIDE extends JFrame {
       int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to quit this program?", "Confirm", JOptionPane.YES_NO_OPTION);
       if (result == JOptionPane.YES_OPTION)
         System.exit(0);
+    }
+  }
+
+  private class MyKeyListener extends KeyAdapter{
+    @Override
+    public void keyPressed(KeyEvent e) {
+      super.keyPressed(e);
+      if(e.isControlDown() && e.getKeyCode() == KeyEvent.VK_C){
+        ActionEvent actionEvent = new ActionEvent(e.getSource(),e.getID(), "Ctrl + C");
+        CompileListener compileListener = new CompileListener();
+
+        compileListener.actionPerformed(actionEvent);
+      }
     }
   }
 
