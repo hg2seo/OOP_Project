@@ -19,7 +19,6 @@ public class GUIBasedJavaIDE extends JFrame {
     setSize(815, 765);
     Container c = getContentPane();
     c.setLayout(null); // 레이아웃 매니저 비활성화
-    addKeyListener(new MyKeyListener());
 
     // JTabbedPane 생성(EditingWindow)
     editingWindow = new JTabbedPane();
@@ -34,13 +33,12 @@ public class GUIBasedJavaIDE extends JFrame {
     resultScrollPane.setBounds(0,505, 800, 200); // 위치, 크기 설정
     resultScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS); // 수평 스크롤바 항상 표시
     resultScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS); // 수직 스크롤바 항상 표시
-    resultWindow.addKeyListener(new MyKeyListener());
     c.add(resultScrollPane);
 
     setVisible(true);
 
-    setFocusable(true);
-    requestFocus();
+    c.setFocusable(true);
+    c.requestFocus();
   }
 
   // 메뉴 생성 메서드
